@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: play-football-backend
+  session:
+    store-type: jdbc
+    jdbc:
+      table-name: SPRING_SESSION
+      initialize-schema: always
+  jpa:
+    hibernate:
+      ddl-auto: update
+  liquibase:
+    enabled: true
+  datasource:
+    password: postgres
+    url: jdbc:postgresql://localhost:5432/playfootball_backend
+    username: postgres

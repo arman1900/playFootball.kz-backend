@@ -1,73 +1,55 @@
 package kz.playfootball.controller;
 
-import javax.management.openmbean.KeyAlreadyExistsException;
+import graphql.ExecutionResult;
+import io.leangen.graphql.annotations.GraphQLArgument;
+import io.leangen.graphql.annotations.GraphQLIgnore;
+import io.leangen.graphql.annotations.GraphQLMutation;
+import io.leangen.graphql.spqr.spring.annotations.GraphQLApi;
 import kz.playfootball.dto.LoginData;
 import kz.playfootball.dto.player.PlayerDto;
+import kz.playfootball.service.GraphQLService;
 import kz.playfootball.service.PlayerService;
 import kz.playfootball.service.SessionService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/playerService")
 public class PlayerController {
 
     private final PlayerService playerService;
     private final SessionService sessionService;
+    private final GraphQLService graphQLService;
 
-
-    @PostMapping("/register")
-    public ResponseEntity<?> registerPlayer(@RequestBody LoginData loginData) {
-        try {
-            PlayerDto player =
-                playerService.registerPlayer(loginData.getPhoneNumber(), loginData.getPassword());
-            return ResponseEntity.ok(player);
-        } catch (KeyAlreadyExistsException exception) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Phone number already exists");
-        }
+    @PostMapping("/graphql")
+    public ResponseEntity<?> graphQL(@RequestBody String query) {
+        ExecutionResult executionResult = graphQLService.getGraphQL().execute(query);
+        return ResponseEntity.ok(executionResult);
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> loginPlayer(@RequestBody LoginData loginData) {
-        var session =  sessionService.getSessionAttribute("player");
+    @GraphQLApi
+    @RequiredArgsConstructor
+    public class PlayerMutation  {
 
-        if (session != null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("logout first");
+        private final PlayerService playerService;
+
+        @GraphQLMutation(name = "registerPlayer")
+        public PlayerDto registerPlayer(@GraphQLArgument(name = "loginData") LoginData loginData) {
+            return playerService.registerPlayer(loginData.getPhoneNumber(), loginData.getPassword());
         }
-        boolean isAuthenticated = playerService.loginPlayer(loginData.getPhoneNumber(), loginData.getPassword());
 
-        if (isAuthenticated) {
-            return ResponseEntity.ok("Player is authenticated");
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body("Invalid phone number or password");
+        @GraphQLMutation(name = "loginPlayer")
+        public boolean loginPlayer(@GraphQLArgument(name = "loginData") LoginData loginData) {
+            return playerService.loginPlayer(loginData.getPhoneNumber(), loginData.getPassword());
         }
-    }
 
-    @GetMapping("/current-player")
-    public ResponseEntity<?> currentPlayer() {
-        PlayerDto player = playerService.getCurrentPlayer();
-        if (player != null) {
-            return ResponseEntity.ok(player);
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Not authorized");
-        }
-    }
-
-    @GetMapping("/logout")
-    public ResponseEntity<?> logoutPlayer() {
-        var loggedOut = playerService.logoutPlayer();
-        if(loggedOut) {
-            return ResponseEntity.ok("Player has been logged out");
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Player is not logged in");
+        @GraphQLMutation(name = "logoutPlayer")
+        public boolean logoutPlayer(@GraphQLArgument(name = "something") String something) {
+            playerService.logoutPlayer();
+            return true;
         }
     }
 }

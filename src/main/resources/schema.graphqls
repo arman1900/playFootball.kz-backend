@@ -1,0 +1,20 @@
+type Player {
+    id: ID!
+    phoneNumber: String!
+    password: String!
+}
+
+type Mutation {
+    registerPlayer(loginData: LoginData!): Player!
+    loginPlayer(loginData: LoginData!): Boolean
+    logoutPlayer: String!
+}
+
+input LoginData {
+    phoneNumber: String!
+    password: String!
+}
+
+schema {
+    mutation: Mutation
+}
